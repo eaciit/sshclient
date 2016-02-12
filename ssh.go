@@ -7,6 +7,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -169,4 +171,52 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 	Ses.Wait()
 
 	return res, err
+}
+
+// Copy file adopted from https://github.com/tmc/scp/blob/master/scp.go
+func (S *SshSetting) CopyFileSsh(filePath, destinationPath string) error {
+	var (
+		err error
+	)
+
+	c, e := S.Connect()
+	if e != nil {
+		err = fmt.Errorf("Unable to connect: %s", e.Error())
+		return err
+	}
+	defer c.Close()
+
+	Ses, e := c.NewSession()
+	if e != nil {
+		err = fmt.Errorf("Unable to start new session: %s", e.Error())
+		return err
+	}
+	defer Ses.Close()
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+	s, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		w, _ := Ses.StdinPipe()
+		defer w.Close()
+		fmt.Fprintf(w, "C%#o %d %s\n", s.Mode().Perm(), s.Size(), filepath.Base(f.Name()))
+		io.Copy(w, f)
+		fmt.Fprint(w, "\x00")
+	}()
+
+	cmd := fmt.Sprintf("scp -t %s", destinationPath)
+
+	if err = Ses.Run(cmd); err != nil {
+		return err
+	}
+
+	return nil
 }
