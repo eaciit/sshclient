@@ -2,6 +2,8 @@ package sshclient
 
 import (
 	. "github.com/eaciit/sshclient"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -43,8 +45,8 @@ func TestSshUsername(t *testing.T) {
 	}
 }
 
-func TestSshCopyFile(t *testing.T) {
-	// t.Skip("Skip : Comment this line to do test")
+func TestSshCopyFilePath(t *testing.T) {
+	t.Skip("Skip : Comment this line to do test")
 	var SshClient SshSetting
 
 	SshClient.SSHAuthType = SSHAuthType_Password
@@ -55,7 +57,39 @@ func TestSshCopyFile(t *testing.T) {
 	filepath := "E:\\goproject\\src\\github.com\\eaciit\\sshclient\\test\\live_test.go"
 	destination := "/home/alip"
 
-	e := SshClient.CopyFileSsh(filepath, destination)
+	e := SshClient.SshCopyByPath(filepath, destination)
+	if e != nil {
+		t.Errorf("Error, %s \n", e)
+	} else {
+		t.Logf("Copy File Success")
+	}
+}
+
+func TestSshCopyFileDirect(t *testing.T) {
+	// t.Skip("Skip : Comment this line to do test")
+	var SshClient SshSetting
+
+	SshClient.SSHAuthType = SSHAuthType_Password
+	SshClient.SSHHost = "192.168.56.101:22"
+	SshClient.SSHUser = "alip"
+	SshClient.SSHPassword = "Bismillah"
+
+	filePath := "E:\\goproject\\src\\github.com\\eaciit\\sshclient\\test\\live_test.go"
+	//Prepare File=============
+	f, err := os.Open(filePath)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	defer f.Close()
+	s, err := f.Stat()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	//========================
+	destination := "/home/alip"
+
+	e := SshClient.SshCopyByFile(f, s.Size(), s.Mode().Perm(), filepath.Base(f.Name()), destination)
 	if e != nil {
 		t.Errorf("Error, %s \n", e)
 	} else {

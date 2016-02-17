@@ -174,7 +174,28 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 }
 
 // Copy file adopted from https://github.com/tmc/scp/blob/master/scp.go
-func (S *SshSetting) CopyFileSsh(filePath, destinationPath string) error {
+func (S *SshSetting) SshCopyByPath(filePath, destinationPath string) error {
+	var (
+		err error
+	)
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+	s, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	err = S.SshCopyByFile(f, s.Size(), s.Mode().Perm(), filepath.Base(f.Name()), destinationPath)
+
+	return nil
+}
+
+func (S *SshSetting) SshCopyByFile(content io.Reader, size int64, perm os.FileMode, filename string, destination string) error {
 	var (
 		err error
 	)
@@ -193,26 +214,15 @@ func (S *SshSetting) CopyFileSsh(filePath, destinationPath string) error {
 	}
 	defer Ses.Close()
 
-	f, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-	s, err := f.Stat()
-	if err != nil {
-		return err
-	}
-
 	go func() {
 		w, _ := Ses.StdinPipe()
 		defer w.Close()
-		fmt.Fprintf(w, "C%#o %d %s\n", s.Mode().Perm(), s.Size(), filepath.Base(f.Name()))
-		io.Copy(w, f)
+		fmt.Fprintf(w, "C%#o %d %s\n", perm, size, filename)
+		io.Copy(w, content)
 		fmt.Fprint(w, "\x00")
 	}()
 
-	cmd := fmt.Sprintf("scp -t %s", destinationPath)
+	cmd := fmt.Sprintf("scp -t %s", destination)
 
 	if err = Ses.Run(cmd); err != nil {
 		return err
