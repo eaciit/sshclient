@@ -3,6 +3,7 @@ package sshclient
 //Handle all ssh connection and run command
 
 import (
+	"bytes"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io"
@@ -29,10 +30,6 @@ type SshSetting struct {
 	SSHKeyLocation string
 	SSHAuthType    SSHAuthTypeEnum
 }
-
-var (
-	ECHO uint32 = 0
-)
 
 /*
 Parsing private key certicate using for connection over ssh
@@ -118,6 +115,25 @@ func TermInOut(w io.Writer, r io.Reader) (chan<- string, <-chan string) {
 }
 
 /*
+Create new session
+*/
+func (s *SshSetting) NewSession() (*ssh.Client, *ssh.Session, error) {
+	client, e := s.Connect()
+	if e != nil {
+		e = fmt.Errorf("Unable to connect: %s", e.Error())
+		return client, nil, e
+	}
+
+	session, e := client.NewSession()
+	if e != nil {
+		e = fmt.Errorf("Unable to start new session: %s", e.Error())
+		return client, session, e
+	}
+
+	return client, session, e
+}
+
+/*
 Build connection and run ssh script, catch the output or give error message if any
 */
 func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
@@ -126,36 +142,30 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 		err error
 	)
 
-	c, e := S.Connect()
+	client, session, e := S.NewSession()
 	if e != nil {
 		err = fmt.Errorf("Unable to connect: %s", e.Error())
 		return res, err
 	}
-	defer c.Close()
-
-	Ses, e := c.NewSession()
-	if e != nil {
-		err = fmt.Errorf("Unable to start new session: %s", e.Error())
-		return res, err
-	}
-	defer Ses.Close()
+	defer client.Close()
+	defer session.Close()
 
 	modes := ssh.TerminalModes{
-		ssh.ECHO:          ECHO,
+		ssh.ECHO:          0,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
 
-	if e = Ses.RequestPty("xterm", 80, 40, modes); e != nil {
+	if e = session.RequestPty("xterm", 80, 40, modes); e != nil {
 		err = fmt.Errorf("Unable to start term: %s", e.Error())
 		return res, err
 	}
 
-	w, _ := Ses.StdinPipe()
-	r, _ := Ses.StdoutPipe()
+	w, _ := session.StdinPipe()
+	r, _ := session.StdoutPipe()
 
 	in, out := TermInOut(w, r)
-	if e = Ses.Start("/bin/sh"); e != nil {
+	if e = session.Start("/bin/sh"); e != nil {
 		err = fmt.Errorf("Unable to start shell: %s", e.Error())
 		return res, err
 	}
@@ -172,9 +182,30 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 		}
 		cmdtemp = cmd
 	}
-	Ses.Wait()
+	session.Wait()
 
 	return res, err
+}
+
+/*
+Run single command, get the output
+*/
+func (s *SshSetting) GetOutputCommandSsh(cmd string) (string, error) {
+	client, session, e := s.NewSession()
+	if e != nil {
+		e = fmt.Errorf("Unable to connect: %s", e.Error())
+		return "", e
+	}
+	defer client.Close()
+	defer session.Close()
+
+	var b bytes.Buffer
+	session.Stdout = &b
+	if e := session.Run(cmd); e != nil {
+		return "", e
+	}
+
+	return b.String(), nil
 }
 
 // Copy file adopted from https://github.com/tmc/scp/blob/master/scp.go
@@ -204,22 +235,16 @@ func (S *SshSetting) SshCopyByFile(content io.Reader, size int64, perm os.FileMo
 		err error
 	)
 
-	c, e := S.Connect()
+	client, session, e := S.NewSession()
 	if e != nil {
 		err = fmt.Errorf("Unable to connect: %s", e.Error())
 		return err
 	}
-	defer c.Close()
-
-	Ses, e := c.NewSession()
-	if e != nil {
-		err = fmt.Errorf("Unable to start new session: %s", e.Error())
-		return err
-	}
-	defer Ses.Close()
+	defer client.Close()
+	defer session.Close()
 
 	go func() {
-		w, _ := Ses.StdinPipe()
+		w, _ := session.StdinPipe()
 		defer w.Close()
 		fmt.Fprintf(w, "C%#o %d %s\n", perm, size, filename)
 		io.Copy(w, content)
@@ -228,7 +253,7 @@ func (S *SshSetting) SshCopyByFile(content io.Reader, size int64, perm os.FileMo
 
 	cmd := fmt.Sprintf("scp -t %s", destination)
 
-	if err = Ses.Run(cmd); err != nil {
+	if err = session.Run(cmd); err != nil {
 		return err
 	}
 
