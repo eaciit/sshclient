@@ -118,19 +118,19 @@ func TermInOut(w io.Writer, r io.Reader) (chan<- string, <-chan string) {
 Create new session
 */
 func (s *SshSetting) NewSession() (*ssh.Client, *ssh.Session, error) {
-	client, e := s.Connect()
+	c, e := s.Connect()
 	if e != nil {
 		e = fmt.Errorf("Unable to connect: %s", e.Error())
-		return client, nil, e
+		return c, nil, e
 	}
 
-	session, e := client.NewSession()
+	Ses, e := c.NewSession()
 	if e != nil {
 		e = fmt.Errorf("Unable to start new session: %s", e.Error())
-		return client, session, e
+		return c, Ses, e
 	}
 
-	return client, session, e
+	return c, Ses, e
 }
 
 /*
@@ -142,13 +142,13 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 		err error
 	)
 
-	client, session, e := S.NewSession()
+	c, Ses, e := S.NewSession()
 	if e != nil {
 		err = fmt.Errorf("Unable to connect: %s", e.Error())
 		return res, err
 	}
-	defer client.Close()
-	defer session.Close()
+	defer c.Close()
+	defer Ses.Close()
 
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          0,
@@ -156,16 +156,16 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 		ssh.TTY_OP_OSPEED: 14400,
 	}
 
-	if e = session.RequestPty("xterm", 80, 40, modes); e != nil {
+	if e = Ses.RequestPty("xterm", 80, 40, modes); e != nil {
 		err = fmt.Errorf("Unable to start term: %s", e.Error())
 		return res, err
 	}
 
-	w, _ := session.StdinPipe()
-	r, _ := session.StdoutPipe()
+	w, _ := Ses.StdinPipe()
+	r, _ := Ses.StdoutPipe()
 
 	in, out := TermInOut(w, r)
-	if e = session.Start("/bin/sh"); e != nil {
+	if e = Ses.Start("/bin/sh"); e != nil {
 		err = fmt.Errorf("Unable to start shell: %s", e.Error())
 		return res, err
 	}
@@ -182,7 +182,7 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 		}
 		cmdtemp = cmd
 	}
-	session.Wait()
+	Ses.Wait()
 
 	return res, err
 }
@@ -191,17 +191,17 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 Run single command, get the output
 */
 func (s *SshSetting) GetOutputCommandSsh(cmd string) (string, error) {
-	client, session, e := s.NewSession()
+	c, Ses, e := s.NewSession()
 	if e != nil {
 		e = fmt.Errorf("Unable to connect: %s", e.Error())
 		return "", e
 	}
-	defer client.Close()
-	defer session.Close()
+	defer c.Close()
+	defer Ses.Close()
 
 	var b bytes.Buffer
-	session.Stdout = &b
-	if e := session.Run(cmd); e != nil {
+	Ses.Stdout = &b
+	if e := Ses.Run(cmd); e != nil {
 		return "", e
 	}
 
@@ -235,16 +235,16 @@ func (S *SshSetting) SshCopyByFile(content io.Reader, size int64, perm os.FileMo
 		err error
 	)
 
-	client, session, e := S.NewSession()
+	c, Ses, e := S.NewSession()
 	if e != nil {
 		err = fmt.Errorf("Unable to connect: %s", e.Error())
 		return err
 	}
-	defer client.Close()
-	defer session.Close()
+	defer c.Close()
+	defer Ses.Close()
 
 	go func() {
-		w, _ := session.StdinPipe()
+		w, _ := Ses.StdinPipe()
 		defer w.Close()
 		fmt.Fprintf(w, "C%#o %d %s\n", perm, size, filename)
 		io.Copy(w, content)
@@ -253,7 +253,7 @@ func (S *SshSetting) SshCopyByFile(content io.Reader, size int64, perm os.FileMo
 
 	cmd := fmt.Sprintf("scp -t %s", destination)
 
-	if err = session.Run(cmd); err != nil {
+	if err = Ses.Run(cmd); err != nil {
 		return err
 	}
 
