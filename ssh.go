@@ -30,6 +30,10 @@ type SshSetting struct {
 	SSHAuthType    SSHAuthTypeEnum
 }
 
+var (
+	ECHO uint32 = 0
+)
+
 /*
 Parsing private key certicate using for connection over ssh
 */
@@ -137,7 +141,7 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 	defer Ses.Close()
 
 	modes := ssh.TerminalModes{
-		ssh.ECHO:          0,
+		ssh.ECHO:          ECHO,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
