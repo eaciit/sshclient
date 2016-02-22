@@ -3,6 +3,7 @@ package sshclient
 //Handle all ssh connection and run command
 
 import (
+	"bytes"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io"
@@ -114,6 +115,25 @@ func TermInOut(w io.Writer, r io.Reader) (chan<- string, <-chan string) {
 }
 
 /*
+Create new session
+*/
+func (s *SshSetting) NewSession() (*ssh.Client, *ssh.Session, error) {
+	c, e := s.Connect()
+	if e != nil {
+		e = fmt.Errorf("Unable to connect: %s", e.Error())
+		return c, nil, e
+	}
+
+	Ses, e := c.NewSession()
+	if e != nil {
+		e = fmt.Errorf("Unable to start new session: %s", e.Error())
+		return c, Ses, e
+	}
+
+	return c, Ses, e
+}
+
+/*
 Build connection and run ssh script, catch the output or give error message if any
 */
 func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
@@ -122,18 +142,12 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 		err error
 	)
 
-	c, e := S.Connect()
+	c, Ses, e := S.NewSession()
 	if e != nil {
 		err = fmt.Errorf("Unable to connect: %s", e.Error())
 		return res, err
 	}
 	defer c.Close()
-
-	Ses, e := c.NewSession()
-	if e != nil {
-		err = fmt.Errorf("Unable to start new session: %s", e.Error())
-		return res, err
-	}
 	defer Ses.Close()
 
 	modes := ssh.TerminalModes{
@@ -173,6 +187,27 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 	return res, err
 }
 
+/*
+Run single command, get the output
+*/
+func (s *SshSetting) GetOutputCommandSsh(cmd string) (string, error) {
+	c, Ses, e := s.NewSession()
+	if e != nil {
+		e = fmt.Errorf("Unable to connect: %s", e.Error())
+		return "", e
+	}
+	defer c.Close()
+	defer Ses.Close()
+
+	var b bytes.Buffer
+	Ses.Stdout = &b
+	if e := Ses.Run(cmd); e != nil {
+		return "", e
+	}
+
+	return b.String(), nil
+}
+
 // Copy file adopted from https://github.com/tmc/scp/blob/master/scp.go
 func (S *SshSetting) SshCopyByPath(filePath, destinationPath string) error {
 	var (
@@ -200,18 +235,12 @@ func (S *SshSetting) SshCopyByFile(content io.Reader, size int64, perm os.FileMo
 		err error
 	)
 
-	c, e := S.Connect()
+	c, Ses, e := S.NewSession()
 	if e != nil {
 		err = fmt.Errorf("Unable to connect: %s", e.Error())
 		return err
 	}
 	defer c.Close()
-
-	Ses, e := c.NewSession()
-	if e != nil {
-		err = fmt.Errorf("Unable to start new session: %s", e.Error())
-		return err
-	}
 	defer Ses.Close()
 
 	go func() {
