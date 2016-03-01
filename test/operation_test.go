@@ -67,3 +67,23 @@ func TestRenameFile(t *testing.T) {
 		t.Logf("RUN")
 	}
 }
+
+func TestRemoveFile(t *testing.T) {
+	e := Remove(SshClient, false, "/root/colony/testchange/file-new.txt")
+
+	if e != nil {
+		t.Errorf("Error, %s \n", e)
+	} else {
+		t.Logf("RUN")
+	}
+}
+
+func TestRemoveDir(t *testing.T) {
+	e := Remove(SshClient, true, "/root/colony/testchange")
+
+	if e != nil {
+		t.Errorf("Error, %s \n", e)
+	} else {
+		t.Logf("RUN")
+	}
+}

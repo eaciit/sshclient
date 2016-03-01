@@ -78,7 +78,7 @@ func Rename(s SshSetting, oldPath string, newPath string) error {
 	return e
 }
 
-/*func Remove(s SshSetting, paths ...string, recursive bool) map[string]error {
+func Remove(s SshSetting, recursive bool, paths ...string) map[string]error {
 	var es map[string]error
 
 	if len(paths) < 1 {
@@ -94,7 +94,7 @@ func Rename(s SshSetting, oldPath string, newPath string) error {
 			cmd = fmt.Sprintf(REMOVE, path)
 		}
 
-		res, e := s.GetOutputCommandSsh(cmd)
+		_, e := s.GetOutputCommandSsh(cmd)
 
 		if e != nil {
 			if es == nil {
@@ -104,7 +104,7 @@ func Rename(s SshSetting, oldPath string, newPath string) error {
 		}
 	}
 	return es
-}*/
+}
 
 func MakeFile(s SshSetting, content string, path string, permission string) error {
 	if path == "" {
