@@ -1,7 +1,8 @@
 package sshclient
 
 import (
-	. "github.com/frezadev/sshclient"
+	// "github.com/eaciit/toolkit"
+	. "github.com/eaciit/sshclient"
 	// "os"
 	// "path/filepath"
 	"testing"
@@ -19,7 +20,8 @@ func TestSshConnect(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	res, e := List(SshClient, "/root")
+	// t.Skip()
+	res, e := List(SshClient, "/", false)
 
 	if e != nil {
 		t.Errorf("Error, %s \n", e)
@@ -29,6 +31,7 @@ func TestList(t *testing.T) {
 }
 
 func TestMakeDir(t *testing.T) {
+	//t.Skip()
 	e := MakeDir(SshClient, "/root/colony/test", "")
 
 	if e != nil {
@@ -39,6 +42,7 @@ func TestMakeDir(t *testing.T) {
 }
 
 func TestRenameDir(t *testing.T) {
+	//t.Skip()
 	e := Rename(SshClient, "/root/colony/test", "/root/colony/testchange")
 
 	if e != nil {
@@ -49,6 +53,7 @@ func TestRenameDir(t *testing.T) {
 }
 
 func TestMakeFile(t *testing.T) {
+	//t.Skip()
 	e := MakeFile(SshClient, "ini isinya ya", "/root/colony/testchange/file.txt", "")
 
 	if e != nil {
@@ -59,7 +64,30 @@ func TestMakeFile(t *testing.T) {
 }
 
 func TestRenameFile(t *testing.T) {
+	//t.Skip()
 	e := Rename(SshClient, "/root/colony/testchange/file.txt", "/root/colony/testchange/file-new.txt")
+
+	if e != nil {
+		t.Errorf("Error, %s \n", e)
+	} else {
+		t.Logf("RUN")
+	}
+}
+
+func TestRemoveFile(t *testing.T) {
+	//t.Skip()
+	e := Remove(SshClient, false, "/root/colony/testchange/file-new.txt")
+
+	if e != nil {
+		t.Errorf("Error, %s \n", e)
+	} else {
+		t.Logf("RUN")
+	}
+}
+
+func TestRemoveDir(t *testing.T) {
+	//t.Skip()
+	e := Remove(SshClient, true, "/root/colony/testchange")
 
 	if e != nil {
 		t.Errorf("Error, %s \n", e)

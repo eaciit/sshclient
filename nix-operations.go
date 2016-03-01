@@ -3,17 +3,13 @@ package sshclient
 import (
 	"fmt"
 	"github.com/eaciit/errorlib"
-	"io"
+	// "io"
 	// "os"
 )
 
 const (
-	TYPE_FOLDER = "dir"
-	TYPE_FILE   = "file"
-)
-
-const (
-	LIST             = "ls -all %s"
+	LIST             = "ls -l %s"
+	LIST_PARAM       = "ls -l %s | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
 	MKDIR            = "mkdir -m %s %s"
 	REMOVE           = "rm -f %s"
 	REMOVE_RECURSIVE = "rm -R -f %s"
@@ -24,12 +20,18 @@ const (
 	CHOWN_RECURSIVE  = "chwon -R %v:%v %v"
 )
 
-func List(s SshSetting, path string) (string, error) {
+func List(s SshSetting, path string, isParseble bool) (string, error) {
 	if path == "" {
 		return "", errorlib.Error("", "", "LIST", "Path is Undivined")
 	}
 
-	cmd := fmt.Sprintf(LIST, path)
+	cmd := ""
+
+	if isParseble {
+		cmd = fmt.Sprintf(LIST_PARAM, path)
+	} else {
+		cmd = fmt.Sprintf(LIST, path)
+	}
 
 	res, e := s.GetOutputCommandSsh(cmd)
 
@@ -78,7 +80,7 @@ func Rename(s SshSetting, oldPath string, newPath string) error {
 	return e
 }
 
-/*func Remove(s SshSetting, paths ...string, recursive bool) map[string]error {
+func Remove(s SshSetting, recursive bool, paths ...string) map[string]error {
 	var es map[string]error
 
 	if len(paths) < 1 {
@@ -94,7 +96,7 @@ func Rename(s SshSetting, oldPath string, newPath string) error {
 			cmd = fmt.Sprintf(REMOVE, path)
 		}
 
-		res, e := s.GetOutputCommandSsh(cmd)
+		_, e := s.GetOutputCommandSsh(cmd)
 
 		if e != nil {
 			if es == nil {
@@ -104,7 +106,7 @@ func Rename(s SshSetting, oldPath string, newPath string) error {
 		}
 	}
 	return es
-}*/
+}
 
 func MakeFile(s SshSetting, content string, path string, permission string) error {
 	if path == "" {
@@ -180,8 +182,8 @@ func Chown(s SshSetting, path string, user string, group string, recursive bool)
 	return e
 }
 
-func UploadFile(s SshSetting, content io.Reader, size int64, filename string, destination string) error {
-	/*if destination == "" {
+/*func UploadFile(s SshSetting, content io.Reader, size int64, filename string, destination string) error {
+	if destination == "" {
 		return errorlib.Error("", "", "UPLOAD_FILE", "Destination is Undivined")
 	}
 
@@ -191,6 +193,5 @@ func UploadFile(s SshSetting, content io.Reader, size int64, filename string, de
 		e = errorlib.Error("", "", "UPLOAD_FILE", e.Error())
 	}
 
-	return e*/
-	return nil
-}
+	return e
+}*/
