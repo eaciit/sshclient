@@ -108,7 +108,7 @@ func Remove(s SshSetting, recursive bool, paths ...string) map[string]error {
 	return es
 }
 
-func MakeFile(s SshSetting, content string, path string, permission string) error {
+func MakeFile(s SshSetting, content string, path string, permission string, format bool) error {
 	if path == "" {
 		return errorlib.Error("", "", "MAKEFILE", "Path is Undivined")
 	}
@@ -124,7 +124,7 @@ func MakeFile(s SshSetting, content string, path string, permission string) erro
 		permission = "755"
 	}
 
-	e = Chmod(s, path, permission)
+	e = Chmod(s, path, permission, format)
 
 	if e != nil {
 		return errorlib.Error("", "", "MAKEFILE", e.Error())
@@ -133,7 +133,39 @@ func MakeFile(s SshSetting, content string, path string, permission string) erro
 	return e
 }
 
-func Chmod(s SshSetting, path string, permission string) error {
+func constructPermission(strPermission string) (result string, err error) {
+	permission_map := map[string]string{
+		"rwx": "7",
+		"rw-": "6",
+		"r-x": "5",
+		"r--": "4",
+		"-wx": "3",
+		"-w-": "2",
+		"--x": "1",
+		"---": "0",
+	}
+
+	if len(strPermission) == 6 {
+		owner := permission_map[strPermission[:3]]
+		group := permission_map[strPermission[3:6]]
+		other := permission_map[strPermission[6:]]
+
+		result = owner + group + other
+	} else {
+		err = errorlib.Error("", "", "Construct Permission", "The permission is not valid")
+	}
+
+	return
+}
+
+func Chmod(s SshSetting, path string, permission string, format bool) (e error) {
+	if format {
+		permission, e = constructPermission(permission)
+		if e != nil {
+			return errorlib.Error("", "", "CHMOD", e.Error())
+		}
+	}
+
 	if path == "" {
 		return errorlib.Error("", "", "CHMOD", "Path is Undivined")
 	}
@@ -143,7 +175,7 @@ func Chmod(s SshSetting, path string, permission string) error {
 	}
 
 	cmd := fmt.Sprintf(CHMOD, permission, path)
-	_, e := s.GetOutputCommandSsh(cmd)
+	_, e = s.GetOutputCommandSsh(cmd)
 
 	if e != nil {
 		return errorlib.Error("", "", "CHMOD", e.Error())
