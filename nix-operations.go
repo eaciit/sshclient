@@ -5,11 +5,15 @@ import (
 	"github.com/eaciit/errorlib"
 	// "io"
 	// "os"
+	// "log"
+	"strings"
 )
 
 const (
 	LIST             = "ls -l %s"
 	LIST_PARAM       = "ls -l %s | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
+	SEARCH           = "ls -l -R %s | grep %s"
+	SEARCH_PARAM     = "ls -l -R %s | grep %s | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
 	MKDIR            = "mkdir -m %s %s"
 	REMOVE           = "rm -f %s"
 	REMOVE_RECURSIVE = "rm -R -f %s"
@@ -31,6 +35,34 @@ func List(s SshSetting, path string, isParseble bool) (string, error) {
 		cmd = fmt.Sprintf(LIST_PARAM, path)
 	} else {
 		cmd = fmt.Sprintf(LIST, path)
+	}
+
+	res, e := s.GetOutputCommandSsh(cmd)
+
+	if e != nil {
+		e = errorlib.Error("", "", "LIST", e.Error())
+	}
+
+	startStr := strings.Index(res, "\n")
+
+	return res[startStr:], e
+}
+
+func Search(s SshSetting, path string, isParseble bool, search string) (string, error) {
+	if path == "" {
+		return "", errorlib.Error("", "", "SEARCH", "Path is Undivined")
+	}
+
+	if search == "" {
+		return "", errorlib.Error("", "", "SEARCH", "Search param is undivined")
+	}
+
+	cmd := ""
+
+	if isParseble {
+		cmd = fmt.Sprintf(SEARCH_PARAM, path, search)
+	} else {
+		cmd = fmt.Sprintf(SEARCH_PARAM, path, search)
 	}
 
 	res, e := s.GetOutputCommandSsh(cmd)
