@@ -177,7 +177,7 @@ func constructPermission(strPermission string) (result string, err error) {
 		"---": "0",
 	}
 
-	if len(strPermission) == 6 {
+	if len(strPermission) == 9 {
 		owner := permission_map[strPermission[:3]]
 		group := permission_map[strPermission[3:6]]
 		other := permission_map[strPermission[6:]]
