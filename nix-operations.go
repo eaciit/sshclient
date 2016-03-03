@@ -22,6 +22,7 @@ const (
 	CHMOD            = "chmod %v %v"
 	CHOWN            = "chwon %v:%v %v"
 	CHOWN_RECURSIVE  = "chwon -R %v:%v %v"
+	CAT              = "cat %v"
 )
 
 func List(s SshSetting, path string, isParseble bool) (string, error) {
@@ -244,6 +245,22 @@ func Chown(s SshSetting, path string, user string, group string, recursive bool)
 	}
 
 	return e
+}
+
+func Cat(s SshSetting, path string) (string, error) {
+	if path == "" {
+		return "", errorlib.Error("", "", "CAT", "Path is Undivined")
+	}
+
+	cmd := fmt.Sprintf(CAT, path)
+
+	res, e := s.GetOutputCommandSsh(cmd)
+
+	if e != nil {
+		e = errorlib.Error("", "", "CAT", e.Error())
+	}
+
+	return res, e
 }
 
 /*func UploadFile(s SshSetting, content io.Reader, size int64, filename string, destination string) error {
