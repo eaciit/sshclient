@@ -10,10 +10,12 @@ import (
 )
 
 const (
-	LIST             = "ls -l %s"
-	LIST_PARAM       = "ls -l %s | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
-	SEARCH           = "ls -l -R %s | grep %s"
-	SEARCH_PARAM     = "ls -l -R %s | grep %s | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
+	LIST         = "ls -l %s"
+	LIST_PARAM   = "ls -l %s | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
+	SEARCH       = "find %v -name *%v* | xargs -r ls -l"
+	SEARCH_PARAM = "find %v -name *%v* | xargs -r ls -l | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
+	// SEARCH           = "ls -l -R %s | grep %s"
+	// SEARCH_PARAM     = "ls -l -R %s | grep %s | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
 	MKDIR            = "mkdir -m %s %s"
 	REMOVE           = "rm -f %s"
 	REMOVE_RECURSIVE = "rm -R -f %s"
@@ -63,13 +65,13 @@ func Search(s SshSetting, path string, isParseble bool, search string) (string, 
 	if isParseble {
 		cmd = fmt.Sprintf(SEARCH_PARAM, path, search)
 	} else {
-		cmd = fmt.Sprintf(SEARCH_PARAM, path, search)
+		cmd = fmt.Sprintf(SEARCH, path, search)
 	}
 
 	res, e := s.GetOutputCommandSsh(cmd)
 
 	if e != nil {
-		e = errorlib.Error("", "", "LIST", e.Error())
+		e = errorlib.Error("", "", "SEARCH", e.Error())
 	}
 
 	return res, e
@@ -155,6 +157,7 @@ func MakeFile(s SshSetting, content string, path string, permission string, form
 
 	if permission == "" {
 		permission = "755"
+		format = false
 	}
 
 	e = Chmod(s, path, permission, format)
@@ -253,9 +256,7 @@ func Cat(s SshSetting, path string) (string, error) {
 	}
 
 	cmd := fmt.Sprintf(CAT, path)
-
 	res, e := s.GetOutputCommandSsh(cmd)
-
 	if e != nil {
 		e = errorlib.Error("", "", "CAT", e.Error())
 	}
