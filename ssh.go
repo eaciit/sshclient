@@ -259,3 +259,22 @@ func (S *SshSetting) SshCopyByFile(content io.Reader, size int64, perm os.FileMo
 
 	return nil
 }
+
+func (S *SshSetting) SshGetFile(path string) (res bytes.Buffer, e error) {
+	c, Ses, e := S.NewSession()
+	if e != nil {
+		e = fmt.Errorf("Unable to connect: %s", e.Error())
+		return
+	}
+	defer c.Close()
+	defer Ses.Close()
+
+	cmd := fmt.Sprintf(CAT, path)
+
+	Ses.Stdout = &res
+	if e = Ses.Run(cmd); e != nil {
+		return
+	}
+
+	return
+}
