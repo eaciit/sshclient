@@ -200,8 +200,6 @@ func (s *SshSetting) GetOutputCommandSsh(cmd string) (string, error) {
 	defer c.Close()
 	defer Ses.Close()
 
-// Ses.buINFO 2016/03/10 17:43:09 mkdir -p "/Users/novalagung/Documents/test-colony/app-root/bin"
-
 	var out bytes.Buffer
 	Ses.Stdout = &out
 	var err bytes.Buffer
