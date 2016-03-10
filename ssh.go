@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"errors"
 )
 
 type SSHAuthTypeEnum int
@@ -199,13 +200,17 @@ func (s *SshSetting) GetOutputCommandSsh(cmd string) (string, error) {
 	defer c.Close()
 	defer Ses.Close()
 
-	var b bytes.Buffer
-	Ses.Stdout = &b
+// Ses.buINFO 2016/03/10 17:43:09 mkdir -p "/Users/novalagung/Documents/test-colony/app-root/bin"
+
+	var out bytes.Buffer
+	Ses.Stdout = &out
+	var err bytes.Buffer
+	Ses.Stderr = &err
 	if e := Ses.Run(cmd); e != nil {
-		return "", e
+		return "", errors.New(fmt.Sprintf("%s. %s", e.Error(), err.String()));
 	}
 
-	return b.String(), nil
+	return out.String(), nil
 }
 
 // Copy file adopted from https://github.com/tmc/scp/blob/master/scp.go
