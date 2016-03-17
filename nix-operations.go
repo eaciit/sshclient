@@ -48,7 +48,11 @@ func List(s SshSetting, path string, isParseble bool) (string, error) {
 
 	startStr := strings.Index(res, "\n")
 
-	return res[startStr:], e
+	if res != "" {
+		return res[startStr:], e
+	}
+
+	return res, e
 }
 
 func Search(s SshSetting, path string, isParseble bool, search string) (string, error) {
