@@ -2,6 +2,7 @@ package sshclient
 
 import (
 	"fmt"
+
 	"github.com/eaciit/errorlib"
 	// "io"
 	// "os"
@@ -12,8 +13,10 @@ import (
 const (
 	LIST         = "ls -l %v"
 	LIST_PARAM   = "ls -l %v | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
-	SEARCH       = "find %v -name *%v* | xargs -r ls -l"
-	SEARCH_PARAM = "find %v -name *%v* | xargs -r ls -l | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
+	SEARCH       = "find %v -name *%v* -ls | awk '{print $3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13}'"
+	SEARCH_PARAM = "find %v -name *%v* -ls | awk '{ print $3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,\"||\",$10,\"||\",$11,$12,$13}'"
+	// SEARCH       = "find %v -name *%v* | xargs -r -l ls -l"
+	// SEARCH_PARAM = "find %v -name *%v* | xargs -r -l ls -l | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
 	// SEARCH           = "ls -l -R %s | grep %s"
 	// SEARCH_PARAM     = "ls -l -R %s | grep %s | awk '{ print $1,\"||\",$2,\"||\",$3,\"||\",$4,\"||\",$5,\"||\",$6,\"||\",$7,\"||\",$8,\"||\",$9,$10,$11}'"
 	MKDIR            = "mkdir -m %v '%v'"
