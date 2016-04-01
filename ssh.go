@@ -4,6 +4,7 @@ package sshclient
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"errors"
 )
 
 type SSHAuthTypeEnum int
@@ -166,10 +166,11 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 	r, _ := Ses.StdoutPipe()
 
 	in, out := TermInOut(w, r)
-	if e = Ses.Start("/bin/sh"); e != nil {
+	if e = Ses.Shell(); e != nil {
 		err = fmt.Errorf("Unable to start shell: %s", e.Error())
 		return res, err
 	}
+	<-out
 
 	cmds = append(cmds, "exit")
 	cmdtemp := ""
@@ -186,6 +187,60 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 	Ses.Wait()
 
 	return res, err
+}
+
+type RunCommandResult struct {
+	CMD    string
+	Output string
+}
+
+/*
+Build connection and run ssh script, catch the output or give error message if any
+*/
+func (s *SshSetting) RunCommandSshAsMap(cmds ...string) ([]RunCommandResult, error) {
+	result := []RunCommandResult{}
+	client, sess, err := s.NewSession()
+	if err != nil {
+		return result, fmt.Errorf("Unable to connect: %s", err.Error())
+	}
+	defer client.Close()
+	defer sess.Close()
+
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,
+		ssh.TTY_OP_ISPEED: 14400,
+		ssh.TTY_OP_OSPEED: 14400,
+	}
+
+	if err = sess.RequestPty("xterm", 80, 40, modes); err != nil {
+		return result, fmt.Errorf("Unable to start term: %s", err.Error())
+	}
+
+	writer, _ := sess.StdinPipe()
+	reader, _ := sess.StdoutPipe()
+
+	in, out := TermInOut(writer, reader)
+	if err = sess.Shell(); err != nil {
+		return result, fmt.Errorf("Unable to start shell: %s", err.Error())
+	}
+	<-out
+
+	cmds = append(cmds, "exit")
+
+	for _, cmd := range cmds {
+		in <- cmd
+		if cmd != "exit" {
+			res := <-out
+			res = strings.TrimSpace(res)
+			res = strings.TrimRight(res, `$`)
+			res = strings.TrimSpace(res)
+			result = append(result, RunCommandResult{cmd, res})
+			fmt.Println(RunCommandResult{cmd, res})
+		}
+	}
+	sess.Wait()
+
+	return result, nil
 }
 
 /*
@@ -205,7 +260,7 @@ func (s *SshSetting) GetOutputCommandSsh(cmd string) (string, error) {
 	var err bytes.Buffer
 	Ses.Stderr = &err
 	if e := Ses.Run(cmd); e != nil {
-		return "", errors.New(fmt.Sprintf("%s. %s", e.Error(), err.String()));
+		return "", errors.New(fmt.Sprintf("%s. %s", e.Error(), err.String()))
 	}
 
 	return out.String(), nil
