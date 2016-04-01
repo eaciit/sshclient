@@ -1,11 +1,11 @@
 package sshclient
 
 import (
+	"fmt"
 	. "github.com/eaciit/sshclient"
 	"os"
 	"path/filepath"
 	"testing"
-	"fmt"
 )
 
 func TestSshKey(t *testing.T) {
@@ -144,4 +144,17 @@ func TestSshReadSnapShot(t *testing.T) {
 		fmt.Println(err)
 	}
 	fmt.Println(output)
+}
+
+func TestCommandAsMap(t *testing.T) {
+	var SshClient SshSetting
+
+	SshClient.SSHHost = "192.168.56.101:22"
+	SshClient.SSHAuthType = 0
+	SshClient.SSHUser = "eaciit1"
+	SshClient.SSHPassword = "12345"
+
+	res, err := SshClient.RunCommandSshAsMap("pwd", "echo 1", "pwd", "echo 1")
+	fmt.Printf("--- %#v\n", err)
+	fmt.Printf("--- %#v\n", res)
 }
