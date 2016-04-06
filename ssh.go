@@ -231,11 +231,10 @@ func (s *SshSetting) RunCommandSshAsMap(cmds ...string) ([]RunCommandResult, err
 		in <- cmd
 		if cmd != "exit" {
 			res := <-out
-			res = strings.TrimSpace(res)
-			res = strings.TrimRight(res, `$`)
+			res = strings.Split(res, `]0;`)[0]
+			res = strings.Split(res, string(0x1b))[0]
 			res = strings.TrimSpace(res)
 			result = append(result, RunCommandResult{cmd, res})
-			fmt.Println(RunCommandResult{cmd, res})
 		}
 	}
 	sess.Wait()
