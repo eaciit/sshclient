@@ -6,13 +6,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"golang.org/x/crypto/ssh"
 )
 
 type SSHAuthTypeEnum int
@@ -58,14 +59,16 @@ func (S *SshSetting) Connect() (*ssh.Client, error) {
 
 	if S.SSHAuthType == SSHAuthType_Certificate {
 		cfg = &ssh.ClientConfig{
-			User: S.SSHUser,
+			User:            S.SSHUser,
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 			Auth: []ssh.AuthMethod{
 				PublicKeyFile(S.SSHKeyLocation),
 			},
 		}
 	} else {
 		cfg = &ssh.ClientConfig{
-			User: S.SSHUser,
+			User:            S.SSHUser,
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 			Auth: []ssh.AuthMethod{
 				ssh.Password(S.SSHPassword),
 			},
