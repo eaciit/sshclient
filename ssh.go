@@ -70,6 +70,8 @@ func (S *SshSetting) Connect() (*ssh.Client, error) {
 		cfg = &ssh.ClientConfig{
 			User:            S.SSHUser,
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+      Auth:[]ssh.AuthMethod{
+      }
 		}
 	} else {
 		cfg = &ssh.ClientConfig{
