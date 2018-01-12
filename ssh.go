@@ -22,7 +22,6 @@ const (
 	//Type authentication login in ssh, it can using password or using public-private key
 	SSHAuthType_Password SSHAuthTypeEnum = iota
 	SSHAuthType_Certificate
-	SSHAuthType_NoPassword
 )
 
 type SshSetting struct {
@@ -65,12 +64,6 @@ func (S *SshSetting) Connect() (*ssh.Client, error) {
 			Auth: []ssh.AuthMethod{
 				PublicKeyFile(S.SSHKeyLocation),
 			},
-		}
-	} else if S.SSHAuthType == SSHAuthType_NoPassword {
-		cfg = &ssh.ClientConfig{
-			User:            S.SSHUser,
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-      Auth:[]ssh.AuthMethod{}
 		}
 	} else {
 		cfg = &ssh.ClientConfig{
