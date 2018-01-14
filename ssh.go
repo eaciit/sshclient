@@ -22,7 +22,6 @@ const (
 	//Type authentication login in ssh, it can using password or using public-private key
 	SSHAuthType_Password SSHAuthTypeEnum = iota
 	SSHAuthType_Certificate
-	SSHAuthType_NoPassword
 )
 
 type SshSetting struct {
@@ -32,6 +31,7 @@ type SshSetting struct {
 	SSHPassword    string
 	SSHKeyLocation string
 	SSHAuthType    SSHAuthTypeEnum
+	SSHDebug       bool
 }
 
 /*
@@ -65,12 +65,6 @@ func (S *SshSetting) Connect() (*ssh.Client, error) {
 			Auth: []ssh.AuthMethod{
 				PublicKeyFile(S.SSHKeyLocation),
 			},
-		}
-	} else if S.SSHAuthType == SSHAuthType_NoPassword {
-		cfg = &ssh.ClientConfig{
-			User:            S.SSHUser,
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-      Auth:[]ssh.AuthMethod{}
 		}
 	} else {
 		cfg = &ssh.ClientConfig{
@@ -115,7 +109,7 @@ func TermInOut(w io.Writer, r io.Reader) (chan<- string, <-chan string) {
 				return
 			}
 			t += n
-			if buf[t-2] == '$' {
+			if buf[t-2] == '$' || (buf[t-3] == '~' && buf[t-2] == '>') {
 				out <- string(buf[:t])
 				t = 0
 				wg.Done()
@@ -134,11 +128,17 @@ func (s *SshSetting) NewSession() (*ssh.Client, *ssh.Session, error) {
 		e = fmt.Errorf("Unable to connect: %s", e.Error())
 		return c, nil, e
 	}
-
+	if s.SSHDebug {
+		fmt.Println("Connected to ", s.SSHHost)
+	}
 	Ses, e := c.NewSession()
 	if e != nil {
 		e = fmt.Errorf("Unable to start new session: %s", e.Error())
 		return c, Ses, e
+	}
+
+	if s.SSHDebug {
+		fmt.Println("Session opened at ", s.SSHHost)
 	}
 
 	return c, Ses, e
@@ -161,6 +161,10 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 	defer c.Close()
 	defer Ses.Close()
 
+	if S.SSHDebug {
+		fmt.Println("Xterm Requested")
+	}
+
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          0,
 		ssh.TTY_OP_ISPEED: 14400,
@@ -172,9 +176,16 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 		return res, err
 	}
 
+	if S.SSHDebug {
+		fmt.Println("Xterm Requested Complete")
+	}
+
 	w, _ := Ses.StdinPipe()
 	r, _ := Ses.StdoutPipe()
 
+	if S.SSHDebug {
+		fmt.Println("Writer Reader initiated")
+	}
 	in, out := TermInOut(w, r)
 	if e = Ses.Shell(); e != nil {
 		err = fmt.Errorf("Unable to start shell: %s", e.Error())
@@ -182,6 +193,9 @@ func (S *SshSetting) RunCommandSsh(cmds ...string) (string, error) {
 	}
 	<-out
 
+	if S.SSHDebug {
+		fmt.Println("Shell started")
+	}
 	cmds = append(cmds, "exit")
 	cmdtemp := ""
 
@@ -222,23 +236,42 @@ func (s *SshSetting) RunCommandSshAsMap(cmds ...string) ([]RunCommandResult, err
 		ssh.TTY_OP_OSPEED: 14400,
 	}
 
+	if s.SSHDebug {
+		fmt.Println("Xterm Requested")
+	}
+
 	if err = sess.RequestPty("xterm", 80, 40, modes); err != nil {
 		return result, fmt.Errorf("Unable to start term: %s", err.Error())
+	}
+
+	if s.SSHDebug {
+		fmt.Println("Xterm Requested Complete")
 	}
 
 	writer, _ := sess.StdinPipe()
 	reader, _ := sess.StdoutPipe()
 
+	if s.SSHDebug {
+		fmt.Println("Writer Reader initiated")
+	}
 	in, out := TermInOut(writer, reader)
 	if err = sess.Shell(); err != nil {
 		return result, fmt.Errorf("Unable to start shell: %s", err.Error())
 	}
+
+	if s.SSHDebug {
+		fmt.Println("Shell started")
+	}
 	<-out
 
 	cmds = append(cmds, "exit")
-
 	for _, cmd := range cmds {
 		in <- cmd
+
+		if s.SSHDebug {
+			fmt.Println("execute command ", cmd)
+		}
+
 		if cmd != "exit" {
 			res := <-out
 			res = strings.Split(res, `]0;`)[0]
